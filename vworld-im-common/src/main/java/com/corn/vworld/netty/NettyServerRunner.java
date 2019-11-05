@@ -2,6 +2,7 @@ package com.corn.vworld.netty;
 
 import com.corn.vworld.netty.handler.ConnectHandler;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -11,6 +12,7 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.jboss.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,6 +59,7 @@ public class NettyServerRunner implements CommandLineRunner {
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         ch.pipeline().addLast(new StringDecoder());
                         ch.pipeline().addLast(new ConnectHandler());
+                        ch.pipeline().addLast((ChannelHandler) new WebSocketServerProtocolHandler("/ws"));
                     }
                 }).bind(Integer.valueOf(nettyPort)).
                 addListeners(new GenericFutureListener<Future<? super Void>>() {
