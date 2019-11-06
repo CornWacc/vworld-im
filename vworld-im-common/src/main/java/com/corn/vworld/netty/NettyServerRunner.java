@@ -1,23 +1,24 @@
 package com.corn.vworld.netty;
 
-import com.corn.vworld.netty.handler.ConnectHandler;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.string.StringDecoder;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
-import org.jboss.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.ImportResource;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
 
 
 /**
@@ -25,53 +26,81 @@ import org.springframework.stereotype.Component;
  * @apiNote netty启动类
  */
 @Component
-public class NettyServerRunner implements CommandLineRunner {
+@PropertySource("classpath:/application.properties")
+public class NettyServerRunner implements CommandLineRunner{
 
     private static final Logger log = LoggerFactory.getLogger(NettyServerRunner.class);
 
     @Value("${netty.port}")
     private String nettyPort;
 
+    /**
+     * 读写线程组大小
+     */
+    @Value("${netty.workgroup.size}")
+    private String workGroupSize;
+
+    /**
+     * 连接线程组大小
+     */
+    @Value("${netty.bossgroup.size}")
+    private String bossGroupSize;
+
+    /**
+     * 连接线程组
+     */
     private EventLoopGroup mainGroup;
 
+    /**
+     * 读写线程组
+     */
     private EventLoopGroup supGroup;
 
+    /**
+     * 辅助器
+     */
     private ServerBootstrap serverBootstrap;
 
 
-    public NettyServerRunner() {
-        this.mainGroup = new NioEventLoopGroup();
-        this.supGroup = new NioEventLoopGroup();
+    @PostConstruct
+    private void init() {
+        this.mainGroup = new NioEventLoopGroup(Integer.valueOf(bossGroupSize));
+        this.supGroup = new NioEventLoopGroup(Integer.valueOf(workGroupSize));
         serverBootstrap = new ServerBootstrap();
     }
 
-    public void run(String... args) throws Exception {
-
-        this.nettyStart();
+    @Override
+    public void run(String... args) {
+        nettyStart();
     }
 
     private void nettyStart() {
 
-        serverBootstrap
-                .group(mainGroup, supGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<NioSocketChannel>() {
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new StringDecoder());
-                        ch.pipeline().addLast(new ConnectHandler());
-                        ch.pipeline().addLast((ChannelHandler) new WebSocketServerProtocolHandler("/ws"));
-                    }
-                }).bind(Integer.valueOf(nettyPort)).
-                addListeners(new GenericFutureListener<Future<? super Void>>() {
-                    public void operationComplete(Future<? super Void> future) throws Exception {
-                        if (future.isSuccess()) {
-                            log.info("------------ netty服务器启动成功:监听端口:{} ----------", nettyPort);
-                        } else {
-                            log.info("------------ netty服务器启动失败:监听端口:{} ----------", nettyPort);
-                        }
-                    }
+        try {
+            ChannelFuture channelFuture =
+                    serverBootstrap
+                            .group(mainGroup, supGroup)
+                            .channel(NioServerSocketChannel.class)
+                            .childHandler(new CustomChannelInitializer())
+                            .bind(Integer.valueOf(nettyPort)).sync()
+                            .addListeners(future -> {
+                                if (future.isSuccess()) {
+                                    log.info("------------ netty服务器启动成功:监听端口:{} ----------", nettyPort);
+                                } else {
+                                    log.info("------------ netty服务器启动失败:监听端口:{} ----------", nettyPort);
+                                }
+                            });
 
-                });
+            channelFuture.channel().closeFuture().sync();
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+
+        } finally {
+            log.info("netty客户端关闭");
+            mainGroup.shutdownGracefully();
+            supGroup.shutdownGracefully();
+        }
 
     }
 }
