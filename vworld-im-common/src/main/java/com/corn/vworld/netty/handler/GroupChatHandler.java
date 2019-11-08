@@ -1,14 +1,13 @@
 package com.corn.vworld.netty.handler;
 
-import com.corn.vworld.netty.base.Handler;
+import com.corn.vworld.netty.base.BaseFromUserInfo;
+import com.corn.vworld.netty.base.BaseHandler;
 import io.netty.channel.Channel;
 
-public class GroupChatHandler implements Handler {
+public class GroupChatHandler extends BaseHandler {
 
-    private Channel channel;
-
-    public GroupChatHandler(Channel channel) {
-        this.channel = channel;
+    public GroupChatHandler(Channel channel, BaseFromUserInfo baseFromUserInfo, String toUserId, String msgContent) {
+        super(channel, baseFromUserInfo, toUserId, msgContent);
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.corn.vworld.netty.handler;
 
-import com.corn.boot.base.Base;
 import com.corn.vworld.netty.base.BaseHandler;
 import com.corn.vworld.netty.base.BaseNettyProperties;
 import io.netty.channel.Channel;
@@ -29,5 +28,9 @@ public class ConnectHandler extends BaseHandler {
         //关闭客户端连接
         ctx.channel().close();
         BaseNettyProperties.channels.remove(channel);
+    }
+
+    @Override
+    public void execute() {
     }
 }
