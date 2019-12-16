@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.corn.base</groupId>
             <artifactId>yyc-spring-boot-starter-pojo</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.4.2</version>
         </dependency>
 
         <dependency>
